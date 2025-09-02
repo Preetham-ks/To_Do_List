@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>To‑Do List (Single-file React)</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-50 min-h-screen p-6">
+  <div id="root" class="max-w-3xl mx-auto"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function App() {
+      const [tasks, setTasks] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('todo_tasks')) || []; }
+        catch { return []; }
+      });
+      const [text, setText] = useState('');
+      const [editingId, setEditingId] = useState(null);
+
+      useEffect(() => {
+        localStorage.setItem('todo_tasks', JSON.stringify(tasks));
+      }, [tasks]);
+
+      function addTask(e) {
+        e.preventDefault();
+        const trimmed = text.trim();
+        if (!trimmed) return;
+        if (editingId) {
+          setTasks(tasks.map(t => t.id === editingId ? { ...t, text: trimmed } : t));
+          setEditingId(null);
+        } else {
+          setTasks([{ id: Date.now(), text: trimmed, done: false }, ...tasks]);
+        }
+        setText('');
+      }
+
+      function toggleDone(id) {
+        setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
+      }
+
+      function removeTask(id) {
+        setTasks(tasks.filter(t => t.id !== id));
+      }
+
+      function startEdit(task) {
+        setEditingId(task.id);
+        setText(task.text);
+      }
+
+      function clearAll() {
+        if (confirm('Clear all tasks?')) setTasks([]);
+      }
+
+      return (
+        <div className="max-w-xl mx-auto mt-12 p-6 bg-white rounded-2xl shadow-md">
+          <h1 className="text-2xl font-semibold mb-4">To‑Do List</h1>
+
+          <form onSubmit={addTask} className="flex gap-2 mb-4">
+            <input
+              className="flex-1 p-2 border rounded-md"
+              placeholder="Add a task..."
+              value={text}
+              onChange={e => setText(e.target.value)}
+            />
+            <button className="px-4 py-2 rounded-md bg-sky-600 text-white" type="submit">
+              {editingId ? 'Save' : 'Add'}
+            </button>
+          </form>
+
+          <div className="space-y-2">
+            {tasks.length === 0 && <p className="text-gray-500">No tasks yet — add one above.</p>}
+            {tasks.map(task => (
+              <div key={task.id} className="flex items-center justify-between p-2 border rounded-md">
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" checked={task.done} onChange={() => toggleDone(task.id)} />
+                  <div className={"select-none " + (task.done ? "line-through text-gray-400" : "")}>{task.text}</div>
+                </div>
+                <div className="flex gap-2">
+                  <button className="text-sm" onClick={() => startEdit(task)}>Edit</button>
+                  <button className="text-sm text-red-600" onClick={() => removeTask(task.id)}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {tasks.length > 0 && (
+            <div className="mt-4 flex justify-between items-center">
+              <div className="text-sm text-gray-600">{tasks.filter(t => !t.done).length} remaining</div>
+              <div className="flex gap-2">
+                <button className="text-sm" onClick={() => setTasks(tasks.map(t => ({ ...t, done: false })))}>Mark all active</button>
+                <button className="text-sm" onClick={() => setTasks(tasks.map(t => ({ ...t, done: true })))}>Mark all done</button>
+                <button className="text-sm text-red-600" onClick={clearAll}>Clear</button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
